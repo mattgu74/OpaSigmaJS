@@ -1,5 +1,5 @@
 opp:
-	opa-plugin-builder sigmajs/plugin/sigma.concat.js sigmajs/plugin/sigma.js -o sigmajs.opp
+	opa-plugin-builder sigmajs/plugin/sigma.concat.js sigma.forceatlas2.js sigmajs/plugin/sigma.js -o sigmajs.opp
 
 plugin:
 	opa sigmajs/sigmajs.opa sigmajs.opp
