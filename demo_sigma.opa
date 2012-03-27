@@ -2,14 +2,27 @@ import sigmajs
 
 Load() =
     xhtml =
-      <div id=#sigma_demo style="height: 500px; width:500px;">
-      </>
+          <div id=#sigma_demo style="height: 500px; width:500px;" />
+    form(add) =
+       <>
+      	  <input id=#node_name type="text" /> <br />
+	  <button onclick={_ -> add()}> Ajouter un noeud </button>
+       </>
     do Dom.transform([#content <- xhtml])
     sigInst = Sigmajs.init(#sigma_demo)
     do Sigmajs.add_node(sigInst, "hello", "Hello", "#FF0000")
+    do Sigmajs.draw(sigInst)
     do Sigmajs.add_node(sigInst, "world", "World", "#00FF00")
     do Sigmajs.add_edge(sigInst, "hello_world","hello","world")
-    Sigmajs.draw(sigInst)
+    do Sigmajs.draw(sigInst)
+    a() = 
+    	 name = Dom.get_value(#node_name)
+         do Sigmajs.add_node(sigInst, name, name, "#0000FF")
+	 do Sigmajs.add_edge(sigInst, name^"_hello", name, "hello")
+	 do Dom.clear_value(#node_name)
+	 do Sigmajs.draw(sigInst)
+	 void
+    Dom.transform([#content +<- form(a)])
 
 content() =
     <div id=#content>
