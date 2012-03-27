@@ -1,2 +1,6 @@
+opp:
+	opa-plugin-builder sigmajs/plugin/sigma.concat.js sigmajs/plugin/sigma.js -o sigmajs.opp
+
 plugin:
-	opa-plugin-builder sigmajs/plugin/sigma.min.js sigmajs/plugin/sigma.js -o sigmajs.opp
+	opa sigmajs/sigmajs.opa sigmajs.opp
+
