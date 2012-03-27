@@ -1,5 +1,5 @@
 ##extern-type sig_inst
-
+##extern-type xml
 
 ##register init: string -> sig_inst
 ##args(dom)
@@ -13,7 +13,7 @@
 {
 		sigInst.addNode(id,{
 			'x': Math.random(),
-      'y': Math.random(),
+			'y': Math.random(),
 			'label': label,
 			'color': color
 		});
