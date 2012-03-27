@@ -4,3 +4,5 @@ opp:
 plugin:
 	opa sigmajs/sigmajs.opa sigmajs.opp
 
+demo:
+	opa --parser classic demo_sigma.opa

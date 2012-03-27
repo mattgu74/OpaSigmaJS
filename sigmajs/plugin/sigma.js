@@ -1,11 +1,10 @@
-##extern-type dom_element
 ##extern-type sig_inst
 
 
-##register init: dom_element -> sig_inst
+##register init: string -> sig_inst
 ##args(dom)
 {
-		var sigInst = sigma.init(dom);
+    var sigInst = sigma.init(document.getElementById(dom));
 		return sigInst;
 }
 
