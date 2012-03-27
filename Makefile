@@ -7,6 +7,11 @@ plugin:
 demo:
 	opa --parser classic demo_sigma.opa
 
+run:
+	./demo_sigma.exe
+
+all: clean opp plugin demo run
+
 clean:
 	rm *.opx -rf
 	rm *.opp -rf

@@ -4,3 +4,21 @@ You could find it on www.sigmajs.org
 
 
 The goal of this project is to bind sigma.js in opa. 
+
+
+=== HOW TO USE ===
+
+make all 
+
+will call in this order :
+make clean
+make opp
+  => Will create the js-binding
+make plugin
+  => Will create the opa package with opafunction to call the js binding
+make demo
+  => Will compile the opa demo code
+make run
+  => Will launch the demo
+  
+Then goto http://localhost:8080 and enjoy.
