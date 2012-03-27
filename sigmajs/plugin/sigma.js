@@ -4,7 +4,7 @@
 ##register init: string -> sig_inst
 ##args(dom)
 {
-    var sigInst = sigma.init(document.getElementById(dom));
+		var sigInst = sigma.init(document.getElementById(dom));
 		return sigInst;
 }
 
@@ -27,4 +27,16 @@
 ##args(sigInst)
 {
 		sigInst.draw();
+}
+
+##register startForceAtlas2: sig_inst -> void
+##args(sigInst)
+{
+		sigInst.startForceAtlas2();
+}
+
+##register stopForceAtlas2: sig_inst -> void
+##args(sigInst)
+{
+    sigInst.stopForceAtlas2();
 }
