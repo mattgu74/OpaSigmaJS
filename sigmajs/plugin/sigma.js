@@ -42,3 +42,9 @@
 {
     sigInst.stopForceAtlas2();
 }
+
+##register parseGexf: sig_inst, string -> void
+##args(sigInst, gexf)
+{
+	sigInst.parseGexf(gexf);
+}

@@ -7,7 +7,9 @@ Load() =
        <>
       	  <input id=#node_name type="text" /> <br />
 	  <button onclick={_ -> add()}> Ajouter un noeud </button><br />
-	  <button onclick={_ -> Sigmajs.startForceAtlas2(sig)}> Démarrer la spatialisation</button> <button onclick={_ -> Sigmajs.stopForceAtlas2(sig)}> Stopper la spatialisation</button>
+	  <button onclick={_ -> Sigmajs.startForceAtlas2(sig)}> Démarrer la spatialisation</button> <button onclick={_ -> Sigmajs.stopForceAtlas2(sig)}> Stopper la spatialisation</button><br />
+	  <textarea id=#gexf_field ></textarea>
+	  <button onclick={_ -> do Sigmajs.parseGexf(sig, Dom.get_value(#gexf_field))  Dom.clear_value(#gexf_field)}>Parser le gexf</button>
        </>
     do Dom.transform([#content <- xhtml])
     sigInst = Sigmajs.init(#sigma_demo)
