@@ -12,8 +12,10 @@
 ##args(sigInst, id, label, color)
 {
 		sigInst.addNode(id,{
-			label: label,
-			color: color
+			'x': Math.random(),
+      'y': Math.random(),
+			'label': label,
+			'color': color
 		});
 }
 
