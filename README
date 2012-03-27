@@ -1,0 +1,6 @@
+Sigma.js is a nopen-source lightweight JavaScript library to draw graphs, using the HTML canvas element.
+
+You could find it on www.sigmajs.org
+
+
+The goal of this project is to bind sigma.js in opa. 
