@@ -58,8 +58,8 @@ add_edge(n1,n2)=
 
 urls : Parser.general_parser(http_request -> resource) =
     parser
-      | "/add_node?id=" id=Server_private.url_decode -> _req -> add_node(id)
-      | "/add_edge?n1=" n1=Server_private.url_decode "&n2=" n2=Server_private.url_decode -> _req -> add_edge(n1,n2)
+      | "/add_node?id=" id=(.*) -> _req -> add_node(id)
+      | "/add_edge?n1=" n1=((![&] .)*) "&n2=" n2=((![&] .)*) -> _req -> add_edge(n1,n2)
       | .* -> _req -> page()
 
 server =  Server.make(
