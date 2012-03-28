@@ -8,21 +8,33 @@ type message = {add_node : string} / {add_edge : (string, string)}
 @client Load() =
     xhtml =
           <div id=#sigma_demo style="height: 500px; width:100%; background: black;" />
+    info(sig) =
+					i() = <>
+								<br />
+								<h2>Info sur le graph</h2>
+								<ul>
+									<li>Nombre de noeuds : {Sigmajs.nodesCount(sig)}</li>
+									<li>Nombre de liens : {Sigmajs.edgesCount(sig)}</li>
+								</ul>
+							</>
+					Dom.transform([#info <- i()])
     form(add, sig) =
        <>
       	  <input id=#node_name type="text" /> <br />
-	  <button onclick={_ -> add()}> Ajouter un noeud </button><br />
-	  <button onclick={_ -> Sigmajs.startForceAtlas2(sig)}> Démarrer la spatialisation</button> <button onclick={_ -> Sigmajs.stopForceAtlas2(sig)}> Stopper la spatialisation</button><br />
-	  <button onclick={_ -> do Sigmajs.parseGexf(sig, "/res/test.gexf") Sigmajs.draw(sig) }>Load test.gexf</button>
+					<button onclick={_ -> add()}> Ajouter un noeud </button><br />
+					<button onclick={_ -> Sigmajs.startForceAtlas2(sig)}> Démarrer la spatialisation</button> <button onclick={_ -> Sigmajs.stopForceAtlas2(sig)}> Stopper la spatialisation</button><br />
+					<button onclick={_ -> do Sigmajs.parseGexf(sig, "/res/test.gexf") Sigmajs.draw(sig) }>Load test.gexf</button> <br />
+					<button onclick={_ -> info(sig)}>Info</button><br />
+					<div id=#info />
        </>
     do Dom.transform([#content <- xhtml])
     sigInst = Sigmajs.init(#sigma_demo)
     message_from_room(msg : message)=
         do match msg with
-	 | {add_node = id} -> Sigmajs.add_node(sigInst, id, id, "#FFFFFF")
-	 | {add_edge = (n1, n2)} -> Sigmajs.add_edge(sigInst, n1^"_"^n2, n1, n2)
-	 | _ -> jlog("Message not understood")
-	Sigmajs.draw(sigInst)
+						| {add_node = id} -> Sigmajs.add_node(sigInst, id, id, "#FFFFFF")
+						| {add_edge = (n1, n2)} -> Sigmajs.add_edge(sigInst, n1^"_"^n2, n1, n2)
+						| _ -> jlog("Message not understood")
+				Sigmajs.draw(sigInst)
     do make_callback(message_from_room)
     do Sigmajs.add_node(sigInst, "hello", "Hello", "#FF0000")
     //do Sigmajs.draw(sigInst)

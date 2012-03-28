@@ -1,4 +1,6 @@
 ##extern-type sig_inst
+##extern-type node
+##extern-type edge
 ##extern-type xml
 
 ##register init: string -> sig_inst
@@ -47,4 +49,28 @@
 ##args(sigInst, gexf)
 {
 	sigInst.parseGexf(gexf);
+}
+
+##register forEachNode: sig_inst, (node -> void) -> void
+##args(sigInst, f)
+{
+	sigInst._core.graph.nodes.forEach(f);
+}
+
+##register forEachEdge: sig_inst, (edge -> void) -> void
+##args(sigInst, f)
+{
+	sigInst._core.graph.edges.forEach(f);
+}
+
+##register nodesCount: sig_inst -> int
+##args(sigInst)
+{
+  return sigInst.getNodesCount();
+}
+ 
+##register edgesCount: sig_inst -> int
+##args(sigInst)
+{
+  return sigInst.getEdgesCount();
 }

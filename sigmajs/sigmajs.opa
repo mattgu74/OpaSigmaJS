@@ -37,4 +37,14 @@ module Sigmajs {
 	%%sigma.parseGexf%%(sig, path)
   }
 
+  function nodesCount(sig)
+  {
+    %%sigma.nodesCount%%(sig)
+  }
+  
+  function edgesCount(sig)
+  {
+    %%sigma.edgesCount%%(sig)
+  }
+
 }
