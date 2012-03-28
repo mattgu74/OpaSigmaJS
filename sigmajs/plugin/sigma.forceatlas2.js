@@ -888,11 +888,11 @@ sigma.forceatlas2.Region.prototype.applyForce = function(n, Force, theta) {
 };
 
 sigma.publicPrototype.startForceAtlas2 = function() {
-  if(!this.forceatlas2) {
+  //if(!this.forceatlas2) {
     this.forceatlas2 = new sigma.forceatlas2.ForceAtlas2(this._core.graph);
     this.forceatlas2.setAutoSettings();
     this.forceatlas2.init();
-  }
+  //}
 
   this.addGenerator('forceatlas2', this.forceatlas2.atomicGo, function(){
     return true;
