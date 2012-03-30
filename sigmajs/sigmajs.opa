@@ -2,49 +2,24 @@ package sigmajs
 
 type sig_inst = external
 
-module Sigmajs {
+Sigmajs(dom) = {{
 
-  function init(dom) {
-    %%sigma.init%%(Dom.get_id(dom))
-  }
+  sig = %%sigma.init%%(Dom.get_id(dom))
 
-  function add_node(sig, id, label, color) {
-    %%sigma.add_node%%(sig,id,label,color)
-  }
+  add_node(id, label, color) = %%sigma.add_node%%(sig,id,label,color)
 
-  function add_edge(sig, id, n1, n2)
-  {
-    %%sigma.add_edge%%(sig,id,n1,n2)
-  }
+  add_edge(id, n1, n2) = %%sigma.add_edge%%(sig,id,n1,n2)
 
-  function draw(sig)
-  {
-    %%sigma.draw%%(sig)
-  }
+  draw() = %%sigma.draw%%(sig)
 
-  function startForceAtlas2(sig)
-  {
-    %%sigma.startForceAtlas2%%(sig)
-  }
+  startForceAtlas2() = %%sigma.startForceAtlas2%%(sig)
 
-  function stopForceAtlas2(sig)
-  {
-    %%sigma.stopForceAtlas2%%(sig)
-  }
+  stopForceAtlas2() = %%sigma.stopForceAtlas2%%(sig)
   
-  function parseGexf(sig, path)
-  {
-	%%sigma.parseGexf%%(sig, path)
-  }
+  parseGexf(path) = %%sigma.parseGexf%%(sig, path)
 
-  function nodesCount(sig)
-  {
-    %%sigma.nodesCount%%(sig)
-  }
+  nodesCount() = %%sigma.nodesCount%%(sig)
   
-  function edgesCount(sig)
-  {
-    %%sigma.edgesCount%%(sig)
-  }
+  edgesCount() =  %%sigma.edgesCount%%(sig)
 
-}
+}}
