@@ -22,3 +22,16 @@ make run
   => Will launch the demo
   
 Then goto http://localhost:8080 and enjoy.
+
+With opa ubuntu package.
+== COMPILE WITH ==
+Opa compiler (c) MLstate -- version 0.9.1 -- build 1518
+
+
+== DON'T COMPILE WITH ==
+Opa compiler (c) MLstate -- version 0.9.1 -- build 1545
+Opa compiler (c) MLstate -- version 0.9.1 -- build 1546
+Opa compiler (c) MLstate -- version 0.9.1 -- build 1532
+Opa compiler (c) MLstate -- version 0.9.1 -- build 1531
+
+
