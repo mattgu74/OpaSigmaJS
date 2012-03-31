@@ -9,6 +9,74 @@ type message = {add_node : node} / {add_edge : edge}
 
 db /graph : stringmap(list(string))
 
+type Domain.ref = string
+
+type Page.ref = string
+type Page.data = {
+    url : string
+    liens : map(Domain.ref, map(Page.ref, bool))
+}
+
+db /graphe : map(Domain.ref, map(Page.ref, Page.data))
+db /graphe[_][_]/liens[_][_] = { false }
+
+url_to_domain_ref(u : string) = 
+    url = Uri.of_string(u)
+    match url with
+     | {some = s} -> match s : Uri.uri with
+       	       	      | {domain = d ; ...} -> d
+		      | _ -> do log_server("Url_to_domain failed (is not absolute) {u}")
+		      	    	       	  ""
+		     end
+     | {none} -> do log_server("Url_to_domain failed {u}")
+       	      	 ""
+
+url_to_page_ref(u : string) = 
+    url = Uri.of_string(u)
+    path_to(p : list(string)) = List.fold((v, a -> "{v}/{a}"), p, "")
+    match url with
+     | {some = s} -> match s : Uri.uri with
+       	       	      | {path = p ; ...} -> path_to(p)
+		      | _ -> do log_server("Url_to_page_ref failed (is mailto) {u}")
+		      	    	       	  ""
+		     end
+     | {none} -> do log_server("Url_to_page_ref failed {u}")
+       	      	 ""
+
+url_need_visit(url) = 
+    Map.is_empty(/graphe[url_to_domain_ref(url)][url_to_page_ref(url)]/liens)
+
+add_pages(urls : list(string)) =
+    List.iter((url -> /graphe[url_to_domain_ref(url)][url_to_page_ref(url)] <- {~url liens=Map.empty}), urls)
+
+add_liens(url:string, liens:list(string)) =
+    domain = url_to_domain_ref(url)
+    page = url_to_page_ref(url)
+    make_link(l) = 
+       d = url_to_domain_ref(l)
+       p = url_to_page_ref(l)
+       /graphe[domain][page]/liens[d][p] <- true
+    List.iter((url -> make_link(url)), liens)
+
+
+// To improve
+// Need to use the limit argument
+// 
+urls_to_visit(limit : int) =
+    fold_domains(d, domain, acc) =
+    (
+        fold_pages(p, page , acc) =
+	(
+	   if Map.is_empty(page.liens) then
+	       List.add(page.url, acc)
+	   else
+	       acc
+	)
+	Map.fold(fold_pages, domain, acc)
+    )
+    Map.fold(fold_domains, /graphe, [])
+
+
 @client message_from_room(sigma)(msg : message)=
     do match msg with
         | {add_node = id} -> sigma.add_node(id, id, "#FFFFFF")
