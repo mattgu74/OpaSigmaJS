@@ -2,7 +2,7 @@ package sigmajs
 
 type sig_inst = external
 
-Sigmajs(dom) = {{
+@client Sigmajs(dom) = {{
 
   sig = %%sigma.init%%(Dom.get_id(dom))
 
@@ -21,5 +21,12 @@ Sigmajs(dom) = {{
   nodesCount() = %%sigma.nodesCount%%(sig)
   
   edgesCount() =  %%sigma.edgesCount%%(sig)
+
+  drawingProperties(lColor, lSize, lBGColor, lHoverColor, lThreshold, edgeType) =
+      %%sigma.drawingProperties%%(sig, lColor, lSize, lBGColor, lHoverColor, lThreshold, edgeType)
+
+  graphProperties(minNodeSize, maxNodeSize, minEdgeSize, maxEdgeSize) = %%sigma.graphProperties%%(sig, minNodeSize, maxNodeSize, minEdgeSize, maxEdgeSize)
+
+  position(x,y,z) = %%sigma.position%%(sig,x,y,z)
 
 }}

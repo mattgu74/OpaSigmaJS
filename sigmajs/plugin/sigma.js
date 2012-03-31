@@ -74,3 +74,33 @@
 {
   return sigInst.getEdgesCount();
 }
+
+##register drawingProperties: sig_inst, string, int, string, string, int, string -> void
+##args(sigInst, lColor, lSize, lBGColor, lHoverColor, lThreshold, edgeType)
+{
+    sigInst.drawingProperties({
+	defaultLabelColor: lColor,
+	defaultLabelSize: lSize,
+	defaultLabelBGColor: lBGColor,
+	defaultLabelHoverColor: lHoverColor,
+	labelThreshold: lThreshold,
+	defaultEdgeType: edgeType
+    });
+}
+
+##register graphProperties: sig_inst, int, int, int, int -> void
+##args(sigInst, minNodeSize, maxNodeSize, minEdgeSize, maxEdgeSize)
+{
+    sigInst.graphProperties({
+	minNodeSize: minNodeSize,
+	maxNodeSize: maxNodeSize,
+	minEdgeSize: minEdgeSize,
+	maxEdgeSize: maxEdgeSize
+    });
+}
+
+##register position: sig_inst, int, int, int -> void
+##args(sigInst, x, y, z)
+{
+    sigInst.position(x,y,z);
+}
