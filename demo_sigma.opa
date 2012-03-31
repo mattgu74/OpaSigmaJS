@@ -161,9 +161,95 @@ add_edge(n1,n2)=
       do /graph[node1] <- List.unique_list_of(List.add(node2, /graph[node1]))
       jlog("add edge {node1} {node2}")
 
+/**
+Extraire le json du body
+*/
+extract_json_from_body() =
+    match HttpRequest.get_body() with
+     | {none} -> {failure="no body"}
+     | {some=raw_body} -> 
+         match Json.deserialize(raw_body) with
+	  | {none} -> {failure= "impossible de convertir en json"}
+	  | {some=jsast} -> {success= OpaSerialize.Json.unserialize_unsorted(jsast)}
+	 end
+    end
+
+type Rest.Add.pages = {urls : list(string)}
+
+/**
+Ajouter des pages
+*/
+rest_add_pages() =
+	match extract_json_from_body() with
+	 | {~failure} -> 
+		do jlog("add_page : {failure}")
+		Resource.raw_status({bad_request})
+	 | {success=opt} -> 
+		match opt with
+		 | {none} -> 
+			do jlog("add_page : le json ne correspond pas")
+			Resource.raw_status({bad_request})
+		 | {some=record : Rest.Add.pages} ->
+			do add_pages(record.urls)
+			Resource.raw_status({success})
+		end
+	end
+
+/**
+Vérifier si une url a besoin d'être vérifié
+**/
+rest_need_a_visit()=
+    match HttpRequest.get_body() with
+     | {~some} -> Resource.raw_response(OpaSerialize.serialize(url_need_visit(some)), "text/plain", {success})
+     | {none} -> Resource.raw_response(OpaSerialize.serialize(false), "text/plain", {success})
+    end
+
+type Rest.Add.links = {url:string links : list(string)}
+/**
+Ajouter des liens
+**/
+rest_add_liens()=
+	match extract_json_from_body() with
+	 | {~failure} -> 
+		do jlog("add_links : {failure}")
+		Resource.raw_status({bad_request})
+	 | {success=opt} -> 
+		match opt with
+		 | {none} -> 
+			do jlog("add_links : le json ne correspond pas")
+			Resource.raw_status({bad_request})
+		 | {some=record : Rest.Add.links} ->
+			do add_liens(record.url, record.links)
+			Resource.raw_status({success})
+		end
+	end
+
+/**
+Obtenir des urls a visiter
+**/
+rest_get_urls()=Resource.raw_response(OpaSerialize.serialize(urls_to_visit(50)), "text/plain", {success})
+
+rest(path) =
+    match HttpRequest.get_method() with
+     | {some = method} -> match method with
+       	       	       	   | {post} -> match path with
+			     	        | "need_a_visit" -> rest_need_a_visit()
+				        | "add_pages" -> rest_add_pages()
+					| "add_liens" -> rest_add_liens()
+					| _ -> Resource.raw_status({bad_request})
+				       end
+		           | {get} -> match path with
+			     	       | "get_urls" -> rest_get_urls()
+				       | _ -> Resource.raw_status({bad_request})
+				      end
+			   | _ -> Resource.raw_status({method_not_allowed})
+			  end
+     | _ -> Resource.raw_status({bad_request})
+
 
 urls : Parser.general_parser(http_request -> resource) =
     parser
+      | "/_rest_/" path=(.*) -> _req -> rest(Text.to_string(path))
       | "/add_node?id=" id=(.*) -> _req -> do add_node(id) Resource.html("OPASigmaJS :: DEMO", <>OK</>)
       | "/add_edge?n1=" n1=((![&] .)*) "&n2=" n2=((![&] .)*) -> _req -> do add_edge(n1,n2) Resource.html("OPASigmaJS :: DEMO", <>OK</>)
       | .* -> _req -> page()
