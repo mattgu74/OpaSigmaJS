@@ -7,8 +7,6 @@ type node = string
 type edge = (string,string)
 type message = {add_node : node} / {add_edge : edge}
 
-db /graph : stringmap(list(string))
-
 type Domain.ref = string
 
 type Page.ref = string
@@ -44,18 +42,29 @@ url_to_page_ref(u : string) =
        	      	 ""
 
 url_need_visit(url) = 
-    Map.is_empty(/graphe[url_to_domain_ref(url)][url_to_page_ref(url)]/liens)
+    do jlog("url_need_visit {url}")
+    d = url_to_domain_ref(url)
+    p = url_to_page_ref(url)
+    Db.exists(@/graphe[d][p]) && Map.is_empty(/graphe[d][p]/liens)
 
 add_pages(urls : list(string)) =
-    List.iter((url -> /graphe[url_to_domain_ref(url)][url_to_page_ref(url)] <- {~url liens=Map.empty}), urls)
+    do jlog("add_pages {Debug.dump(urls)}")
+    List.iter((url -> do Network.broadcast({add_node = url}, room) 
+    		      path = @/graphe[url_to_domain_ref(url)][url_to_page_ref(url)]
+		      if not(Db.exists(path)) then
+		          do jlog("{url} n'existait pas comme noeud, le lien a été ajouté")
+		          Db.write(path, {~url liens=Map.empty})), urls)
 
-add_liens(url:string, liens:list(string)) =
+add_liens(url:string, liens:list(string)) = 
+    do add_pages(List.add(url, liens))
+    do jlog("add_liens {url} ==> {Debug.dump(liens)}")
     domain = url_to_domain_ref(url)
     page = url_to_page_ref(url)
     make_link(l) = 
-       d = url_to_domain_ref(l)
-       p = url_to_page_ref(l)
-       /graphe[domain][page]/liens[d][p] <- true
+      d = url_to_domain_ref(l)
+      p = url_to_page_ref(l)
+      do Network.broadcast({add_edge = (url,l)}, room)
+      /graphe[domain][page]/liens[d][p] <- true
     List.iter((url -> make_link(url)), liens)
 
 
@@ -63,9 +72,9 @@ add_liens(url:string, liens:list(string)) =
 // Need to use the limit argument
 // 
 urls_to_visit(limit : int) =
-    fold_domains(d, domain, acc) =
+    fold_domains(_d, domain, acc) =
     (
-        fold_pages(p, page , acc) =
+        fold_pages(_p, page , acc) =
 	(
 	   if Map.is_empty(page.liens) then
 	       List.add(page.url, acc)
@@ -106,8 +115,29 @@ urls_to_visit(limit : int) =
 	 </>
      Dom.transform([#control <- control])
 
-@publish get_nodes() = Map.To.key_list(/graph)
-@publish get_edges() = Map.To.assoc_list(/graph)
+myIter(fun, myMap, start) =
+    fold_domains(d, domain, acc) =
+    (
+        fold_pages(p, page , acc) =
+	(
+	    fun(d, p, page, acc)
+	)
+	Map.fold(fold_pages, domain, acc)
+    )
+    Map.fold(fold_domains, myMap, start)   
+
+@publish get_nodes() = myIter((_, _, p, a -> List.add(p.url, a)), /graphe, [])  
+
+@publish get_edges() = myIter(
+				(_, _, page, a -> List.add((page.url, 
+						   myIter(
+				      	              (d, p, _, ac -> List.add(/graphe[d][p]/url, ac)), 
+					              page.liens, 
+					              [])
+						   ),
+						   a)), 
+			        /graphe, 
+				[]) 
 
 @client load_nodes(sigma) =
     nodes = get_nodes()
@@ -147,19 +177,6 @@ content() =
     </div>
 
 page() = Resource.styled_page("OPASigmaJS :: DEMO", ["/res/css.css"], content())
-
-add_node(n) =
-     node = Text.to_string(n)
-     do Network.broadcast({add_node = node}, room)
-     do /graph[node] <- /graph[node]
-     jlog("add node {node}")
-
-add_edge(n1,n2)=
-      node1 = Text.to_string(n1)
-      node2 = Text.to_string(n2)
-      do Network.broadcast({add_edge = (node1,node2)}, room)
-      do /graph[node1] <- List.unique_list_of(List.add(node2, /graph[node1]))
-      jlog("add edge {node1} {node2}")
 
 /**
 Extraire le json du body
@@ -204,7 +221,7 @@ rest_need_a_visit()=
      | {none} -> Resource.raw_response(OpaSerialize.serialize(false), "text/plain", {success})
     end
 
-type Rest.Add.links = {url:string links : list(string)}
+type Rest.Add.links = {url : string links : list(string)}
 /**
 Ajouter des liens
 **/
@@ -250,8 +267,6 @@ rest(path) =
 urls : Parser.general_parser(http_request -> resource) =
     parser
       | "/_rest_/" path=(.*) -> _req -> rest(Text.to_string(path))
-      | "/add_node?id=" id=(.*) -> _req -> do add_node(id) Resource.html("OPASigmaJS :: DEMO", <>OK</>)
-      | "/add_edge?n1=" n1=((![&] .)*) "&n2=" n2=((![&] .)*) -> _req -> do add_edge(n1,n2) Resource.html("OPASigmaJS :: DEMO", <>OK</>)
       | .* -> _req -> page()
 
 server =  Server.make(
