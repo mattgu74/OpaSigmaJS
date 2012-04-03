@@ -96,7 +96,7 @@ urls_to_visit(limit : int) =
         domain = url_to_domain_ref(id)
         sigma.add_node(domain, domain, "#FFFFFF")
     )
-    ae_domain(n1, n2) = (
+    ae_domain((n1, n2)) = (
         d1 = url_to_domain_ref(n1)
         d2 = url_to_domain_ref(n2)
         sigma.add_edge(d1^"_"^d2, d1, d2)
@@ -115,11 +115,6 @@ urls_to_visit(limit : int) =
             sigma.add_edge(n1^"_"^n2, n1, n2)
         else 
             void
-    )
-    ae_domain((n1, n2)) = (
-        d1 = url_to_domain_ref(n1)
-        d2 = url_to_domain_ref(n2)
-        sigma.add_edge(d1^"_"^d2, d1, d2)
     )
     (an, ae) = match mode with 
                 | {all} -> (an_domain, ae_domain)
@@ -244,7 +239,7 @@ content(state) =
 page() = Resource.styled_page("OPASigmaJS :: DEMO", ["/res/css.css"], content({all}))
 
 content_domain() =
-    all_domain = Map.fold((domain, pages, acc -> <><li><a onclick={_ -> load_client({~domain})}>{domain} ({Map.size(pages)})</a></li>{acc}</>), /graphe, <></>) 
+    all_domain = Map.fold((domain, pages, acc -> <><li><a onclick={_ -> do Dom.transform([#sigma_demo <- <></>]) load_client({~domain})}>{domain} ({Map.size(pages)})</a></li>{acc}</>), /graphe, <></>) 
     <div id=#sigma_demo>
         <ul>{all_domain}</ul>
     </>
