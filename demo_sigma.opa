@@ -10,6 +10,7 @@ type edges = list(edge)
 type message = {add_node : node} / {add_edge : edge} / {add_nodes : nodes} / {add_edges : edges}
 
 type Domain.ref = string
+type state_client = {all} / {domain : Domain.ref}
 
 type Page.ref = string
 type Page.data = {
@@ -104,12 +105,45 @@ urls_to_visit(limit : int) =
     List.map((page -> /graphe[page.domain][page.page]/url), result)
 
 
-@client message_from_room(sigma)(msg : message)=
+@client message_from_room(sigma, mode)(msg : message)=
+    an_domain(id) = (
+        domain = url_to_domain_ref(id)
+        sigma.add_node(domain, domain, "#FFFFFF")
+    )
+    ae_domain(n1, n2) = (
+        d1 = url_to_domain_ref(n1)
+        d2 = url_to_domain_ref(n2)
+        sigma.add_edge(d1^"_"^d2, d1, d2)
+    )
+    an_filter(domain)(id) = (
+        d = url_to_domain_ref(id)
+        if d == domain then
+            sigma.add_node(id, id, "#FFFFFF")
+        else 
+            void
+    )
+    ae_filter(domain)((n1,n2)) = (
+        d1 = url_to_domain_ref(n1)
+        d2 = url_to_domain_ref(n2)
+        if (d1 == domain && d2 == domain) then 
+            sigma.add_edge(n1^"_"^n2, n1, n2)
+        else 
+            void
+    )
+    ae_domain((n1, n2)) = (
+        d1 = url_to_domain_ref(n1)
+        d2 = url_to_domain_ref(n2)
+        sigma.add_edge(d1^"_"^d2, d1, d2)
+    )
+    (an, ae) = match mode with 
+                | {all} -> (an_domain, ae_domain)
+                | {domain = d} -> (an_filter(d), ae_filter(d))
+                end
     do match msg with
-        | {add_node = id} -> sigma.add_node(id, id, "#FFFFFF")
-        | {add_edge = (n1, n2)} -> sigma.add_edge(n1^"_"^n2, n1, n2)
-	| {add_nodes = nodes} -> List.iter((n -> sigma.add_node(n, n, "#FFFFFF")), nodes)
-	| {add_edges = edges} -> List.iter(((n1, n2) -> sigma.add_edge(n1^"_"^n2, n1, n2)), edges)
+        | {add_node = id} -> an(id)
+        | {add_edge = (n1, n2)} -> ae((n1, n2))
+	    | {add_nodes = nodes} -> List.iter(an, nodes)
+	    | {add_edges = edges} -> List.iter(ae, edges)
         | _ -> void
     sigma.draw()
 
@@ -117,7 +151,7 @@ urls_to_visit(limit : int) =
     info() =
       <>
         Nodes : {sigma.nodesCount()} <br />
-	Edges : {sigma.edgesCount()} <br />
+	    Edges : {sigma.edgesCount()} <br />
       </>
     Scheduler.timer(500, (-> Dom.transform([#info <- info()])))
 
@@ -176,36 +210,42 @@ get_edges_by_domain(domain) = @todo
 			        /graphe, 
 				[])
 
-@client load_nodes(sigma) =
-    nodes = get_nodes_domain()
+@client load_nodes(sigma, state) =
+    nodes = match state with 
+             | {all} -> get_nodes_domain()
+             | {~domain} -> get_nodes_by_domain(domain)
+             | _ -> []
     an(v) = sigma.add_node(v,v,"#FFF")
     List.iter(an, nodes)
 
-@client load_edges(sigma) =
-    edges = get_edges_domain()
+@client load_edges(sigma, state) =
+    edges = match state with
+             | {all} -> get_edges_domain()
+             | {~domain} -> get_edges_by_domain(domain)
+             | _ -> []
     ae((v1,v2)) = sigma.add_edge(v1^"_"^v2,v1,v2)
     f((n1,list_edge)) = List.iter((v2 -> ae((n1, v2))), list_edge)
     List.iter(f, edges)
 
 @server log_server = jlog
 
-@client load_client() =
+@client load_client(state) =
     sigma = Sigmajs(#sigma_demo)
     do load_control(sigma)
     do sigma.drawingProperties("#fff", 12, "#fff", "#000", 6, "curve")
     do sigma.graphProperties(1,3,1,1)
     do sigma.draw()
     do update_info(sigma)
-    do Network.add_callback(message_from_room(sigma), room)
-    do load_nodes(sigma)
+    do Network.add_callback(message_from_room(sigma, state), room)
+    do load_nodes(sigma, state)
     do sigma.draw()
-    do load_edges(sigma)
+    do load_edges(sigma, state)
     do sigma.draw()
     do log_server("a new client is loaded")
     void
 
-content() =
-    <div id=#sigma_demo onready={_ -> load_client()} />
+content(state) =
+    <div id=#sigma_demo onready={_ -> load_client(state)} />
     <div id=#info>
         Nodes : 0 <br />
 	Edges : 0 <br />
@@ -213,7 +253,29 @@ content() =
     <div id=#control>
     </div>
 
-page() = Resource.styled_page("OPASigmaJS :: DEMO", ["/res/css.css"], content())
+page() = Resource.styled_page("OPASigmaJS :: DEMO", ["/res/css.css"], content({all}))
+
+help_content() =
+    <>  
+        <h1>Interface REST</h1>
+        <h2>POST /_REST_/need_a_visit</h2>
+        Input : RAW url dans le content body d'un POST<br />
+        Output : raw_text (false or true) <br />
+        Description : Indique si l'url à besoin d'être visité ou non <br />
+        <h2>POST /_REST_/add_pages </h2>
+        Input : JSON (urls : list(string)) <br />
+        Output : Resource.raw_status(success) OR Resource.raw_status(bad_request) <br />
+        Description : Ajoute la liste d'url au graphe <br />
+        <h2>POST /_REST_/add_liens </h2>
+        Input : JSON (url:string, links : list(string)) <br />
+        Output : Resource.raw_status(success) OR Resource.raw_status(bad_request) <br />
+        Description : Ajoute des liens entre url => urls (PS : Ajoute les pages si elles n'existent pas => add_pages est optionnel) <br />
+        <h2>GET /_REST_/get_urls</h2>
+        Input: rien <br />
+        Output: JSON (list(string))<br />
+        Description: Retourne une liste de 5urls à visiter par le crawler. Normalement liste différente à chaque appels<br />
+    </>
+help() = Resource.html("OPASigmaJS :: DEMO :: HELP", help_content())
 
 /**
 Extraire le json du body
@@ -289,16 +351,16 @@ rest(path) =
     match HttpRequest.get_method() with
      | {some = method} -> match method with
        	       	       	   | {post} -> match path with
-			     	        | "need_a_visit" -> rest_need_a_visit()
-				        | "add_pages" -> rest_add_pages()
-					| "add_liens" -> rest_add_liens()
-					| _ -> Resource.raw_status({bad_request})
-				       end
-		           | {get} -> match path with
-			     	       | "get_urls" -> rest_get_urls()
-				       | _ -> Resource.raw_status({bad_request})
-				      end
-			   | _ -> Resource.raw_status({method_not_allowed})
+			     	                   | "need_a_visit" -> rest_need_a_visit()
+				                       | "add_pages" -> rest_add_pages()
+					                   | "add_liens" -> rest_add_liens()
+					                   | _ -> Resource.raw_status({bad_request})
+				                    end
+	                       | {get} -> match path with
+		     	                        | "get_urls" -> rest_get_urls()
+				                        | _ -> Resource.raw_status({bad_request})
+				                    end
+	  | _ -> Resource.raw_status({method_not_allowed})
 			  end
      | _ -> Resource.raw_status({bad_request})
 
@@ -306,6 +368,7 @@ rest(path) =
 urls : Parser.general_parser(http_request -> resource) =
     parser
       | "/_rest_/" path=(.*) -> _req -> rest(Text.to_string(path))
+      | "/help" -> _req -> help()
       | .* -> _req -> page()
 
 server =  Server.make(
