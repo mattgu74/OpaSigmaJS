@@ -4,8 +4,10 @@ import stdlib.widgets.colorpicker
 @publish room = Network.cloud("room"): Network.network(message)
 
 type node = string
+type nodes = list(node)
 type edge = (string,string)
-type message = {add_node : node} / {add_edge : edge}
+type edges = list(edge)
+type message = {add_node : node} / {add_edge : edge} / {add_nodes : nodes} / {add_edges : edges}
 
 type Domain.ref = string
 
@@ -61,7 +63,8 @@ url_need_visit(url) =
 
 add_pages(urls : list(string)) =
     do jlog("add_pages {Debug.dump(urls)}")
-    List.iter((url -> do Network.broadcast({add_node = url}, room) 
+    do Network.broadcast({add_nodes = urls}, room)
+    List.iter((url ->  
     		      domain = url_to_domain_ref(url)
 		      page = url_to_page_ref(url)
     		      path = @/graphe[domain][page]
@@ -78,10 +81,9 @@ add_liens(url:string, liens:list(string)) =
     make_link(l) = 
       d = url_to_domain_ref(l)
       p = url_to_page_ref(l)
-      do Network.broadcast({add_edge = (url,l)}, room)
       /graphe[domain][page]/liens[d][p] <- true
-    List.iter((url -> make_link(url)), liens)
-
+    do List.iter((url -> make_link(url)), liens)
+    Network.broadcast({add_edges = List.map((lien -> (url, lien)),liens)}, room) 
 
 urls_to_visit(limit : int) =
     /*fold_domains(_d, domain, acc) =
