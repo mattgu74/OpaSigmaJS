@@ -239,14 +239,24 @@ content(state) =
     <div id=#sigma_demo onready={_ -> load_client(state)} />
     <div id=#info>
         Nodes : 0 <br />
-	Edges : 0 <br />
+	    Edges : 0 <br />
     </div>
     <div id=#control>
     </div>
 
 page() = Resource.styled_page("OPASigmaJS :: DEMO", ["/res/css.css"], content({all}))
 
-page_domain() = Resource.styled_page("OPASigmaJS :: DEMO", ["/res/css.css"], content({all}))
+content_domain() =
+    all_domain = Map.fold((domain, pages, acc -> <><li><a onclick={_ -> load_client({~domain})}>{domain} ({Map.size(pages)})</a></li>{acc}</>), /graphe, <></>) 
+    <div id=#sigma_demo>
+        <ul>{all_domain}</ul>
+    </>
+    <div id=#info>
+    </div>
+    <div id=#control>
+    </div>
+
+page_domain() = Resource.styled_page("OPASigmaJS :: DEMO", ["/res/css.css"], content_domain())
 
 help_content() =
     <>  
