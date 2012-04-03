@@ -83,7 +83,7 @@ urls_to_visit(limit : int) =
 	)
 	Map.fold(fold_pages, domain, acc)
     )
-    Map.fold(fold_domains, /graphe, [])
+    List.take(limit, Map.fold(fold_domains, /graphe, []))
 
 
 @client message_from_room(sigma)(msg : message)=
@@ -186,7 +186,7 @@ extract_json_from_body() =
      | {none} -> {failure="no body"}
      | {some=raw_body} -> 
          match Json.deserialize(raw_body) with
-	  | {none} -> {failure= "impossible de convertir en json"}
+	  | {none} -> {failure= "impossible de convertir en json {raw_body}"}
 	  | {some=jsast} -> {success= OpaSerialize.Json.unserialize_unsorted(jsast)}
 	 end
     end
@@ -244,7 +244,9 @@ rest_add_liens()=
 /**
 Obtenir des urls a visiter
 **/
-rest_get_urls()=Resource.raw_response(OpaSerialize.serialize(urls_to_visit(50)), "text/plain", {success})
+rest_get_urls()=
+    do jlog("a crawler ask url")
+    Resource.json(OpaSerialize.Json.serialize(urls_to_visit(5)))
 
 rest(path) =
     match HttpRequest.get_method() with
