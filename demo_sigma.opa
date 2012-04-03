@@ -146,7 +146,24 @@ myIter(fun, myMap, start) =
     )
     Map.fold(fold_domains, myMap, start)   
 
-@publish get_nodes() = myIter((_, _, p, a -> List.add(p.url, a)), /graphe, [])  
+@publish get_nodes() = myIter((_, _, p, a -> List.add(p.url, a)), /graphe, [])
+
+get_nodes_by_domain(domain) = @todo 
+
+@publish get_nodes_domain() = Map.fold((dom_ref, _, acc -> List.add(dom_ref, acc)), /graphe, [])
+
+@publish get_edges_domain() = List.unique_list_of(myIter(
+				(dom_ref, _, page, a -> List.add((dom_ref, 
+						   myIter(
+				      	              (d, _p, _, ac -> List.add(d, ac)), 
+					              page.liens, 
+					              [])
+						   ),
+						   a)), 
+			        /graphe, 
+				[]))
+
+get_edges_by_domain(domain) = @todo
 
 @publish get_edges() = myIter(
 				(_, _, page, a -> List.add((page.url, 
@@ -157,15 +174,15 @@ myIter(fun, myMap, start) =
 						   ),
 						   a)), 
 			        /graphe, 
-				[]) 
+				[])
 
 @client load_nodes(sigma) =
-    nodes = get_nodes()
+    nodes = get_nodes_domain()
     an(v) = sigma.add_node(v,v,"#FFF")
     List.iter(an, nodes)
 
 @client load_edges(sigma) =
-    edges = get_edges()
+    edges = get_edges_domain()
     ae((v1,v2)) = sigma.add_edge(v1^"_"^v2,v1,v2)
     f((n1,list_edge)) = List.iter((v2 -> ae((n1, v2))), list_edge)
     List.iter(f, edges)
