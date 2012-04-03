@@ -18,9 +18,9 @@ type Page.data = {
     liens : map(Domain.ref, map(Page.ref, bool))
 }
 
-db /graphe : map(Domain.ref, map(Page.ref, Page.data))
 
-db /to_visit : list(string)
+
+db /graphe : map(Domain.ref, map(Page.ref, Page.data))
 
 db /graphe[_][_]/liens[_][_] = { false }
 
@@ -62,11 +62,10 @@ add_pages(urls : list(string)) =
     		      path = @/graphe[domain][page]
 		      if not(Db.exists(path)) then
 		          do jlog("{url} n'existait pas comme noeud, le lien a été ajouté")
-			  do /to_visit <- List.add(url, /to_visit) 
+			      //do /to_visit <- List.append(url, /to_visit) 
 		          Db.write(path, {~url liens=Map.empty})), urls)
 
 add_liens(url:string, liens:list(string)) = 
-    do /to_visit <- List.remove(url, /to_visit)
     do add_pages(List.add(url, liens))
     do jlog("add_liens {url} ==> {Debug.dump(liens)}")
     domain = url_to_domain_ref(url)
@@ -79,21 +78,18 @@ add_liens(url:string, liens:list(string)) =
     Network.broadcast({add_edges = List.map((lien -> (url, lien)),liens)}, room) 
 
 urls_to_visit(limit : int) =
-    /*fold_domains(_d, domain, acc) =
+    fold_domains(_d, domain, acc) =
     (
         fold_pages(_p, page , acc) =
-	(
-	   if Map.is_empty(page.liens) then
+	    (
+	     if Map.is_empty(page.liens) then
 	       List.add(page.url, acc)
-	   else
+	     else
 	       acc
-	)
+	    )
 	Map.fold(fold_pages, domain, acc)
-	List.take(limit, Map.fold(fold_domains, /graphe, []))
-    )*/
-    (result, end) = List.split_at(/to_visit, limit)
-    do /to_visit <- end
-    result
+    )
+    List.take(limit, Map.fold(fold_domains, /graphe, []))
 
 @client message_from_room(sigma, mode)(msg : message)=
     an_domain(id) = (
@@ -172,7 +168,7 @@ myIter(fun, myMap, start) =
 
 @publish get_nodes() = myIter((_, _, p, a -> List.add(p.url, a)), /graphe, [])
 
-get_nodes_by_domain(domain) = @todo 
+@publish get_nodes_by_domain(domain) = Map.fold((_page_ref, page, acc -> List.add(page.url, acc)), /graphe[domain], [])
 
 @publish get_nodes_domain() = Map.fold((dom_ref, _, acc -> List.add(dom_ref, acc)), /graphe, [])
 
@@ -187,7 +183,9 @@ get_nodes_by_domain(domain) = @todo
 			        /graphe, 
 				[]))
 
-get_edges_by_domain(domain) = @todo
+@publish get_edges_by_domain(domain) = Map.fold((page_ref, page, acc ->
+                                                        liens = Map.fold((pref, _, a -> List.add(/graphe[domain][pref]/url,a)), /graphe[domain][page_ref]/liens[domain], [])
+                                                        List.add((page.url, liens), acc)), /graphe[domain], [])
 
 @publish get_edges() = myIter(
 				(_, _, page, a -> List.add((page.url, 
