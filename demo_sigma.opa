@@ -78,7 +78,7 @@ add_liens(url:string, liens:list(string)) =
     Network.broadcast({add_edges = List.map((lien -> (url, lien)),liens)}, room) 
 
 urls_to_visit(limit : int) =
-    fold_domains(_d, domain, acc) =
+    /*fold_domains(_d, domain, acc) =
     (
         fold_pages(_p, page , acc) =
 	    (
@@ -89,7 +89,18 @@ urls_to_visit(limit : int) =
 	    )
 	Map.fold(fold_pages, domain, acc)
     )
-    List.take(limit, Map.fold(fold_domains, /graphe, []))
+    List.take(limit, Map.fold(fold_domains, /graphe, []))*/
+    add_url(acc) = 
+         (_key, data) = 
+            (domain, data) = Option.get(Map.random_get(/graphe))
+            Option.get(Map.random_get(data))
+         url = data.url 
+         if url_need_visit(url) then 
+            List.add(url, acc)
+         else 
+            acc
+    while([], (acc -> new_acc = add_url(acc)
+                      (new_acc, List.length(new_acc) < limit)))
 
 @client message_from_room(sigma, mode)(msg : message)=
     an_domain(id) = (
