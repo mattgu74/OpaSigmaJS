@@ -155,7 +155,7 @@ get_nodes_by_domain(domain) = @todo
 @publish get_edges_domain() = List.unique_list_of(myIter(
 				(dom_ref, _, page, a -> List.add((dom_ref, 
 						   myIter(
-				      	              (d, _p, _, ac -> List.add(d, ac)), 
+				      	              (d, _p, _, ac -> List.unique_list_of(List.add(d, ac))), 
 					              page.liens, 
 					              [])
 						   ),
