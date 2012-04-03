@@ -49,8 +49,9 @@ url_to_page_ref(u : string) =
 
 url_need_visit(url : string) : bool = 
     do jlog("url_need_visit {url}")
-    List.exists((a -> a==url), /to_visit)
-    //Db.exists(@/graphe[d][p]) && Map.is_empty(/graphe[d][p]/liens)
+    d = url_to_domain_ref(url)
+    p = url_to_page_ref(url)
+    Db.exists(@/graphe[d][p]) && Map.is_empty(/graphe[d][p]/liens)
 
 add_pages(urls : list(string)) =
     do jlog("add_pages {Debug.dump(urls)}")
