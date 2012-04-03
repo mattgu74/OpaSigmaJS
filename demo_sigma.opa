@@ -99,9 +99,8 @@ urls_to_visit(limit : int) =
 	Map.fold(fold_pages, domain, acc)
 	List.take(limit, Map.fold(fold_domains, /graphe, []))
     )*/
-    do /to_visit <- List.mapi((i, page -> if i < limit then {page with count=page.count+1} else page), /to_visit)
-    result = List.take(limit, /to_visit)
-    do /to_visit <- List.sort_by((page -> page.count), /to_visit)
+    (result, end) = List.split_at(/to_visit, limit)
+    do /to_visit <- List.append(end, List.map((page -> {page with count=page.count+1}),result))
     List.map((page -> /graphe[page.domain][page.page]/url), result)
 
 
@@ -255,6 +254,8 @@ content(state) =
 
 page() = Resource.styled_page("OPASigmaJS :: DEMO", ["/res/css.css"], content({all}))
 
+page_domain() = Resource.styled_page("OPASigmaJS :: DEMO", ["/res/css.css"], content({all}))
+
 help_content() =
     <>  
         <h1>Interface REST</h1>
@@ -369,6 +370,7 @@ urls : Parser.general_parser(http_request -> resource) =
     parser
       | "/_rest_/" path=(.*) -> _req -> rest(Text.to_string(path))
       | "/help" -> _req -> help()
+      | "/domain" -> _req -> page_domain()
       | .* -> _req -> page()
 
 server =  Server.make(
