@@ -1907,17 +1907,20 @@ function Graph() {
    */
   function addEdge(id, source, target, params) {
     if (self.edgesIndex[id]) {
-      throw new Error('Edge "' + id + '" already exists.');
+      //throw new Error('Edge "' + id + '" already exists.');
+      console.log('Edge "' + id + '" already exists.');
     }
 
     if (!self.nodesIndex[source]) {
       var s = 'Edge\'s source "' + source + '" does not exist yet.';
-      throw new Error(s);
+      //throw new Error(s);
+      console.log(s);
     }
 
     if (!self.nodesIndex[target]) {
       var s = 'Edge\'s target "' + target + '" does not exist yet.';
-      throw new Error(s);
+      //throw new Error(s);
+      console.log(s);
     }
 
     params = params || {};
