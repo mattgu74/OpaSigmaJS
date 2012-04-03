@@ -20,17 +20,9 @@ type Page.data = {
 
 db /graphe : map(Domain.ref, map(Page.ref, Page.data))
 
-type url_a_visiter = {
-     domain : Domain.ref
-     page : Page.ref
-     count : int
-}
-
-db /to_visit : list(url_a_visiter)
+db /to_visit : list(string)
 
 db /graphe[_][_]/liens[_][_] = { false }
-
-
 
 url_to_domain_ref(u : string) = 
     url = Uri.of_string(u)
@@ -55,11 +47,9 @@ url_to_page_ref(u : string) =
      | {none} -> do log_server("Url_to_page_ref failed {u}")
        	      	 ""
 
-url_need_visit(url) = 
+url_need_visit(url : string) : bool = 
     do jlog("url_need_visit {url}")
-    d = url_to_domain_ref(url)
-    p = url_to_page_ref(url)
-    List.exists((page -> d==page.domain && p==page.page), /to_visit)
+    List.exists((a -> a==url), /to_visit)
     //Db.exists(@/graphe[d][p]) && Map.is_empty(/graphe[d][p]/liens)
 
 add_pages(urls : list(string)) =
@@ -71,10 +61,11 @@ add_pages(urls : list(string)) =
     		      path = @/graphe[domain][page]
 		      if not(Db.exists(path)) then
 		          do jlog("{url} n'existait pas comme noeud, le lien a été ajouté")
-			  do /to_visit <- List.add({~domain ~page count=0}, /to_visit) 
+			  do /to_visit <- List.add(url, /to_visit) 
 		          Db.write(path, {~url liens=Map.empty})), urls)
 
 add_liens(url:string, liens:list(string)) = 
+    do /to_visit <- List.remove(url, /to_visit)
     do add_pages(List.add(url, liens))
     do jlog("add_liens {url} ==> {Debug.dump(liens)}")
     domain = url_to_domain_ref(url)
@@ -100,9 +91,10 @@ urls_to_visit(limit : int) =
 	List.take(limit, Map.fold(fold_domains, /graphe, []))
     )*/
     (result, end) = List.split_at(/to_visit, limit)
-    do /to_visit <- List.append(end, List.map((page -> {page with count=page.count+1}),result))
-    List.map((page -> /graphe[page.domain][page.page]/url), result)
+    do new_to_visit(result,end)
+    result
 
+@async new_to_visit(l1, l2) = /to_visit <- List.append(l2, l1)
 
 @client message_from_room(sigma, mode)(msg : message)=
     an_domain(id) = (
