@@ -108,6 +108,8 @@ urls_to_visit(limit : int) =
     do match msg with
         | {add_node = id} -> sigma.add_node(id, id, "#FFFFFF")
         | {add_edge = (n1, n2)} -> sigma.add_edge(n1^"_"^n2, n1, n2)
+	| {add_nodes = nodes} -> List.iter((n -> sigma.add_node(n, n, "#FFFFFF")), nodes)
+	| {add_edges = edges} -> List.iter(((n1, n2) -> sigma.add_edge(n1^"_"^n2, n1, n2)), edges)
         | _ -> void
     sigma.draw()
 
