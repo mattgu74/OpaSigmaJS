@@ -158,7 +158,7 @@ UriParser =
 
   query_element = parser 
                    | key=chars_query "=" value=chars_query -> (key, value)
-                   | key=chars_query -> (key, "")
+                   | key=chars_query "="? -> (key, "")
   query_parser = Rule.parse_list(query_element, parser [&;] -> void)
 
   query =
