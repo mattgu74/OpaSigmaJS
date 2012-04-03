@@ -1911,17 +1911,17 @@ function Graph() {
       console.log('Edge "' + id + '" already exists.');
     }
 
-    if (!self.nodesIndex[source]) {
+    else if (!self.nodesIndex[source]) {
       var s = 'Edge\'s source "' + source + '" does not exist yet.';
       //throw new Error(s);
       console.log(s);
     }
 
-    if (!self.nodesIndex[target]) {
+    else if (!self.nodesIndex[target]) {
       var s = 'Edge\'s target "' + target + '" does not exist yet.';
       //throw new Error(s);
       console.log(s);
-    }
+    } else {
 
     params = params || {};
     var e = {
@@ -1965,6 +1965,7 @@ function Graph() {
 
     self.edges.push(e);
     self.edgesIndex[id.toString()] = e;
+    }
 
     return self;
   };
