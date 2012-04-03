@@ -309,8 +309,9 @@ Vérifier si une url a besoin d'être vérifié
 **/
 rest_need_a_visit()=
     match HttpRequest.get_body() with
-     | {~some} -> Resource.raw_response(OpaSerialize.serialize(url_need_visit(some)), "text/plain", {success})
-     | {none} -> Resource.raw_response(OpaSerialize.serialize(false), "text/plain", {success})
+     | {~some} -> r = if url_need_visit(some) then "true" else "false"
+                  Resource.raw_response(r, "text/plain", {success})
+     | {none} -> Resource.raw_response("false", "text/plain", {success})
     end
 
 type Rest.Add.links = {url : string links : list(string)}
