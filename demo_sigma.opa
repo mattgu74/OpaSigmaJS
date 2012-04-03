@@ -67,7 +67,7 @@ add_pages(urls : list(string)) =
     		      path = @/graphe[domain][page]
 		      if not(Db.exists(path)) then
 		          do jlog("{url} n'existait pas comme noeud, le lien a été ajouté")
-			  do /to_visit <- {~domain ~page count=0} 
+			  do /to_visit <- List.add({~domain ~page count=0}, /to_visit) 
 		          Db.write(path, {~url liens=Map.empty})), urls)
 
 add_liens(url:string, liens:list(string)) = 
@@ -96,7 +96,7 @@ urls_to_visit(limit : int) =
 	Map.fold(fold_pages, domain, acc)
 	List.take(limit, Map.fold(fold_domains, /graphe, []))
     )*/
-    do /to_visit <- List.mapi(((i, page) -> if i < limit then {page with count=page.count+1} else page), /to_visit)
+    do /to_visit <- List.mapi((i, page -> if i < limit then {page with count=page.count+1} else page), /to_visit)
     result = List.take(limit, /to_visit)
     do /to_visit <- List.sort_by((page -> page.count), /to_visit)
     List.map((page -> /graphe[page.domain][page.page]/url), result)
