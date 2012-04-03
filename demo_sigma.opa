@@ -16,7 +16,18 @@ type Page.data = {
 }
 
 db /graphe : map(Domain.ref, map(Page.ref, Page.data))
+
+type url_a_visiter = {
+     domain : Domain.ref
+     page : Page.ref
+     count : int
+}
+
+db /to_visit : list(url_a_visiter)
+
 db /graphe[_][_]/liens[_][_] = { false }
+
+
 
 url_to_domain_ref(u : string) = 
     url = Uri.of_string(u)
@@ -45,14 +56,18 @@ url_need_visit(url) =
     do jlog("url_need_visit {url}")
     d = url_to_domain_ref(url)
     p = url_to_page_ref(url)
-    Db.exists(@/graphe[d][p]) && Map.is_empty(/graphe[d][p]/liens)
+    List.exists((page -> d==page.domain && p==page.page), /to_visit)
+    //Db.exists(@/graphe[d][p]) && Map.is_empty(/graphe[d][p]/liens)
 
 add_pages(urls : list(string)) =
     do jlog("add_pages {Debug.dump(urls)}")
     List.iter((url -> do Network.broadcast({add_node = url}, room) 
-    		      path = @/graphe[url_to_domain_ref(url)][url_to_page_ref(url)]
+    		      domain = url_to_domain_ref(url)
+		      page = url_to_page_ref(url)
+    		      path = @/graphe[domain][page]
 		      if not(Db.exists(path)) then
 		          do jlog("{url} n'existait pas comme noeud, le lien a été ajouté")
+			  do /to_visit <- {~domain ~page count=0} 
 		          Db.write(path, {~url liens=Map.empty})), urls)
 
 add_liens(url:string, liens:list(string)) = 
@@ -68,11 +83,8 @@ add_liens(url:string, liens:list(string)) =
     List.iter((url -> make_link(url)), liens)
 
 
-// To improve
-// Need to use the limit argument
-// 
 urls_to_visit(limit : int) =
-    fold_domains(_d, domain, acc) =
+    /*fold_domains(_d, domain, acc) =
     (
         fold_pages(_p, page , acc) =
 	(
@@ -82,8 +94,12 @@ urls_to_visit(limit : int) =
 	       acc
 	)
 	Map.fold(fold_pages, domain, acc)
-    )
-    List.take(limit, Map.fold(fold_domains, /graphe, []))
+	List.take(limit, Map.fold(fold_domains, /graphe, []))
+    )*/
+    do /to_visit <- List.mapi(((i, page) -> if i < limit then {page with count=page.count+1} else page), /to_visit)
+    result = List.take(limit, /to_visit)
+    do /to_visit <- List.sort_by((page -> page.count), /to_visit)
+    List.map((page -> /graphe[page.domain][page.page]/url), result)
 
 
 @client message_from_room(sigma)(msg : message)=
