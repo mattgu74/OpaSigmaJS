@@ -25,7 +25,7 @@ db /to_visit : list(string)
 db /graphe[_][_]/liens[_][_] = { false }
 
 url_to_domain_ref(u : string) = 
-    url = Uri.of_string(u)
+    url = Parser.try_parse(UriParser.uri, u)
     match url with
      | {some = s} -> match s : Uri.uri with
        	       	      | {domain = d ; ...} -> d
@@ -91,10 +91,8 @@ urls_to_visit(limit : int) =
 	List.take(limit, Map.fold(fold_domains, /graphe, []))
     )*/
     (result, end) = List.split_at(/to_visit, limit)
-    do new_to_visit(result,end)
+    do /to_visit <- end
     result
-
-@async new_to_visit(l1, l2) = /to_visit <- List.append(l2, l1)
 
 @client message_from_room(sigma, mode)(msg : message)=
     an_domain(id) = (

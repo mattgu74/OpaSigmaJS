@@ -5,7 +5,7 @@ plugin:
 	opa --parser classic sigmajs/sigmajs.opa sigmajs.opp --no-server
 
 demo:
-	opa --parser classic demo_sigma.opa
+	opa --parser classic uri_parser.opa demo_sigma.opa
 
 run:
 	./demo_sigma.exe
