@@ -7,10 +7,13 @@ plugin:
 demo:
 	opa --parser classic uri_parser.opa demo_sigma.opa
 
-run:
-	./demo_sigma.exe
+mongo:
+	opa --database mongo --parser classic uri_parser.opa db.opa rest.opa demo_sigma.opa
 
-all: clean opp plugin demo run
+run:
+	./demo_sigma.exe --db-local ~/mongodata/opa
+
+all: clean opp plugin mongo run
 
 clean:
 	rm *.opx -rf

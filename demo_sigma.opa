@@ -3,139 +3,76 @@ import stdlib.widgets.colorpicker
 
 @publish room = Network.cloud("room"): Network.network(message)
 
-type node = string
+type node = {id : Node.id ; domain : Domain.ref ; page : Page.ref}
 type nodes = list(node)
-type edge = (string,string)
+type edge = {id : Edge.id ; from : Node.id ; to : Node.id}
 type edges = list(edge)
+
 type message = {add_node : node} / {add_edge : edge} / {add_nodes : nodes} / {add_edges : edges}
+type state_client = {all} / {domain : Domain.ref} / {super}
 
-type Domain.ref = string
-type state_client = {all} / {domain : Domain.ref}
+_add_pages(urls : list(string)) =
+  nodes = List.fold(
+            (url, acc ->
+              (domain, page, id, ajoute) = Graphe.add_page(url)
+              if ajoute then
+                List.add({~id ~domain ~page} : node, acc)
+              else
+                acc
+            ),
+            urls,
+            []
+          )
+  do Network.broadcast({add_nodes = nodes}, room)
+  void
 
-type Page.ref = string
-type Page.data = {
-    url : string
-    liens : map(Domain.ref, map(Page.ref, bool))
-}
+_add_liens(url:string, liens:list(string)) = 
+  do _add_pages(List.add(url, liens))
+  do Graphe.visited(url)
+  edges = List.fold(
+            (to, acc -> 
+              (id, from, to, ajoute) = Graphe.add_lien(url, to)
+              if ajoute then
+                List.add({~id ~from ~to} : edge, acc)
+              else
+                acc
+            ),
+            liens,
+            []
+          )
+  do Network.broadcast({add_edges = edges}, room)
+  void
 
-
-
-db /graphe : map(Domain.ref, map(Page.ref, Page.data))
-
-db /graphe[_][_]/liens[_][_] = { false }
-
-url_to_domain_ref(u : string) = 
-    url = Parser.try_parse(UriParser.uri, u)
-    match url with
-     | {some = s} -> match s : Uri.uri with
-       	       	      | {domain = d ; ...} -> d
-		      | _ -> do log_server("Url_to_domain failed (is not absolute) {u}")
-		      	    	       	  ""
-		     end
-     | {none} -> do log_server("Url_to_domain failed {u}")
-       	      	 ""
-
-url_to_page_ref(u : string) = 
-    url = Uri.of_string(u)
-    path_to(p : list(string)) = List.fold((v, a -> "{v}/{a}"), p, "")
-    match url with
-     | {some = s} -> match s : Uri.uri with
-       	       	      | {path = p ; ...} -> path_to(p)
-		      | _ -> do log_server("Url_to_page_ref failed (is mailto) {u}")
-		      	    	       	  ""
-		     end
-     | {none} -> do log_server("Url_to_page_ref failed {u}")
-       	      	 ""
-
-url_need_visit(url : string) : bool = 
-    do jlog("url_need_visit {url}")
-    d = url_to_domain_ref(url)
-    p = url_to_page_ref(url)
-    Db.exists(@/graphe[d][p]) && Map.is_empty(/graphe[d][p]/liens)
-
-add_pages(urls : list(string)) =
-    do jlog("add_pages {Debug.dump(urls)}")
-    do Network.broadcast({add_nodes = urls}, room)
-    List.iter((url ->  
-    		      domain = url_to_domain_ref(url)
-		      page = url_to_page_ref(url)
-    		      path = @/graphe[domain][page]
-		      if not(Db.exists(path)) then
-		          do jlog("{url} n'existait pas comme noeud, le lien a été ajouté")
-			      //do /to_visit <- List.append(url, /to_visit) 
-		          Db.write(path, {~url liens=Map.empty})), urls)
-
-add_liens(url:string, liens:list(string)) = 
-    do add_pages(List.add(url, liens))
-    do jlog("add_liens {url} ==> {Debug.dump(liens)}")
-    domain = url_to_domain_ref(url)
-    page = url_to_page_ref(url)
-    make_link(l) = 
-      d = url_to_domain_ref(l)
-      p = url_to_page_ref(l)
-      /graphe[domain][page]/liens[d][p] <- true
-    do List.iter((url -> make_link(url)), liens)
-    Network.broadcast({add_edges = List.map((lien -> (url, lien)),liens)}, room) 
-
-urls_to_visit(limit : int) =
-    /*fold_domains(_d, domain, acc) =
-    (
-        fold_pages(_p, page , acc) =
-	    (
-	     if Map.is_empty(page.liens) then
-	       List.add(page.url, acc)
-	     else
-	       acc
-	    )
-	Map.fold(fold_pages, domain, acc)
-    )
-    List.take(limit, Map.fold(fold_domains, /graphe, []))*/
-    add_url(acc) = 
-         (_key, data) = 
-            (domain, data) = Option.get(Map.random_get(/graphe))
-            Option.get(Map.random_get(data))
-         url = data.url 
-         if url_need_visit(url) then 
-            List.add(url, acc)
-         else 
-            acc
-    while([], (acc -> new_acc = add_url(acc)
-                      (new_acc, List.length(new_acc) < limit)))
 
 @client message_from_room(sigma, mode)(msg : message)=
-    an_domain(id) = (
-        domain = url_to_domain_ref(id)
-        sigma.add_node(domain, domain, "#FFFFFF")
-    )
-    ae_domain((n1, n2)) = (
-        d1 = url_to_domain_ref(n1)
-        d2 = url_to_domain_ref(n2)
-        sigma.add_edge(d1^"_"^d2, d1, d2)
-    )
-    an_filter(domain)(id) = (
-        d = url_to_domain_ref(id)
-        if d == domain then
-            sigma.add_node(id, id, "#FFFFFF")
+    an_domain(n) = (
+        if n.page == "" then 
+          sigma.add_node("{n.id}", "{n.domain}", "#FFFFFF")
         else 
-            void
+          void
     )
-    ae_filter(domain)((n1,n2)) = (
-        d1 = url_to_domain_ref(n1)
-        d2 = url_to_domain_ref(n2)
-        if (d1 == domain && d2 == domain) then 
-            sigma.add_edge(n1^"_"^n2, n1, n2)
+    an_all(n) = (
+        sigma.add_node("{n.id}", "{n.domain} {n.page}", "#FFFFFF")
+    )
+    ae_domain(e) = (
+        sigma.add_edge("{e.id}", "{e.from}", "{e.to}")
+    )
+    an_filter(domain)(n) = (
+        if n.domain == domain then
+            sigma.add_node("{n.id}", "{n.domain} {n.page}", "#FFFFFF")
         else 
             void
     )
     (an, ae) = match mode with 
+                | {super} -> (an_all, ae_domain)
                 | {all} -> (an_domain, ae_domain)
-                | {domain = d} -> (an_filter(d), ae_filter(d))
+                | {domain = d} -> (an_filter(d), ae_domain)
                 end
     do match msg with
-        | {add_node = id} -> an(id)
-        | {add_edge = (n1, n2)} -> ae((n1, n2))
-	    | {add_nodes = nodes} -> List.iter(an, nodes)
-	    | {add_edges = edges} -> List.iter(ae, edges)
+        | {add_node = n} -> an(n)
+        | {add_edge = e} -> ae(e)
+	      | {add_nodes = nodes} -> List.iter(an, nodes)
+	      | {add_edges = edges} -> List.iter(ae, edges)
         | _ -> void
     sigma.draw()
 
@@ -143,7 +80,7 @@ urls_to_visit(limit : int) =
     info() =
       <>
         Nodes : {sigma.nodesCount()} <br />
-	    Edges : {sigma.edgesCount()} <br />
+	      Edges : {sigma.edgesCount()} <br />
       </>
     Scheduler.timer(500, (-> Dom.transform([#info <- info()])))
 
@@ -161,65 +98,35 @@ urls_to_visit(limit : int) =
 	 </>
      Dom.transform([#control <- control])
 
-myIter(fun, myMap, start) =
-    fold_domains(d, domain, acc) =
-    (
-        fold_pages(p, page , acc) =
-	(
-	    fun(d, p, page, acc)
-	)
-	Map.fold(fold_pages, domain, acc)
-    )
-    Map.fold(fold_domains, myMap, start)   
 
-@publish get_nodes() = myIter((_, _, p, a -> List.add(p.url, a)), /graphe, [])
+@publish get_nodes() : nodes = Iter.fold((node, acc -> List.add({id=node.id domain=node.domain page=node.page}, acc)), DbSet.iterator(/nodes), [])
 
-@publish get_nodes_by_domain(domain) = Map.fold((_page_ref, page, acc -> List.add(page.url, acc)), /graphe[domain], [])
+@publish get_nodes_by_domain(domain) : nodes = Iter.fold((node, acc -> List.add({id=node.id domain=node.domain page=node.page}, acc)), DbSet.iterator(/nodes[domain == domain]), [])
 
-@publish get_nodes_domain() = Map.fold((dom_ref, _, acc -> List.add(dom_ref, acc)), /graphe, [])
+@publish get_nodes_domain() : nodes = Iter.fold((node, acc -> List.add({id=node.id domain=node.domain page=node.page}, acc)), DbSet.iterator(/nodes[page == ""]), [])
 
-@publish get_edges_domain() = List.unique_list_of(myIter(
-				(dom_ref, _, page, a -> List.add((dom_ref, 
-						   myIter(
-				      	              (d, _p, _, ac -> List.unique_list_of(List.add(d, ac))), 
-					              page.liens, 
-					              [])
-						   ),
-						   a)), 
-			        /graphe, 
-				[]))
+@publish get_edges() = Iter.fold((edge, acc -> List.add({id=edge.id from=edge.from to=edge.to}, acc)), DbSet.iterator(/edges), [])
 
-@publish get_edges_by_domain(domain) = Map.fold((page_ref, page, acc ->
-                                                        liens = Map.fold((pref, _, a -> List.add(/graphe[domain][pref]/url,a)), /graphe[domain][page_ref]/liens[domain], [])
-                                                        List.add((page.url, liens), acc)), /graphe[domain], [])
+@publish get_edges_domain() = Iter.fold((edge, acc -> List.add({id=edge.id from=edge.from to=edge.to}, acc)), DbSet.iterator(/edges[page_from == "" and page_to == ""]), []) // TODO : IMPROVE
 
-@publish get_edges() = myIter(
-				(_, _, page, a -> List.add((page.url, 
-						   myIter(
-				      	              (d, p, _, ac -> List.add(/graphe[d][p]/url, ac)), 
-					              page.liens, 
-					              [])
-						   ),
-						   a)), 
-			        /graphe, 
-				[])
+@publish get_edges_by_domain(domain) = Iter.fold((edge, acc -> List.add({id=edge.id from=edge.from to=edge.to}, acc)), DbSet.iterator(/edges[domain_from == domain and t == {inside_domain}]), []) 
+
 
 @client load_nodes(sigma, state) =
-    nodes = match state with 
-             | {all} -> get_nodes_domain()
-             | {~domain} -> get_nodes_by_domain(domain)
-             | _ -> []
-    an(v) = sigma.add_node(v,v,"#FFF")
-    List.iter(an, nodes)
+    match state with 
+      | {all} -> List.iter((n -> sigma.add_node("{n.id}", "{n.domain}", "#FFF")),get_nodes_domain())
+      | {~domain} -> List.iter((n -> sigma.add_node("{n.id}", "{n.domain} {n.page}", "#FFF")), get_nodes_by_domain(domain))
+      | {super} -> List.iter((n -> sigma.add_node("{n.id}", "{n.domain} {n.page}", "#FFF")), get_nodes())
+      | _ -> void
 
 @client load_edges(sigma, state) =
     edges = match state with
              | {all} -> get_edges_domain()
              | {~domain} -> get_edges_by_domain(domain)
+             | {super} -> get_edges()
              | _ -> []
-    ae((v1,v2)) = sigma.add_edge(v1^"_"^v2,v1,v2)
-    f((n1,list_edge)) = List.iter((v2 -> ae((n1, v2))), list_edge)
-    List.iter(f, edges)
+    ae(e) = sigma.add_edge("{e.id}","{e.from}","{e.to}")
+    List.iter(ae, edges)
 
 @server log_server = jlog
 
@@ -248,9 +155,10 @@ content(state) =
     </div>
 
 page() = Resource.styled_page("OPASigmaJS :: DEMO", ["/res/css.css"], content({all}))
+page_all() = Resource.styled_page("OPASigmaJS :: DEMO", ["/res/css.css"], content({super}))
 
 content_domain() =
-    all_domain = Map.fold((domain, pages, acc -> <><li><a onclick={_ -> do Dom.transform([#sigma_demo <- <></>]) load_client({~domain})}>{domain} ({Map.size(pages)})</a></li>{acc}</>), /graphe, <></>) 
+    all_domain = List.fold((domain, acc -> <><li><a onclick={_ -> do Dom.transform([#sigma_demo <- <></>]) load_client({~domain})}>{domain} ({Graphe.nodes_in_domain(domain)})</a></li>{acc}</>), /domains, <></>) 
     <div id=#sigma_demo>
         <ul>{all_domain}</ul>
     </>
@@ -283,99 +191,31 @@ help_content() =
     </>
 help() = Resource.html("OPASigmaJS :: DEMO :: HELP", help_content())
 
-/**
-Extraire le json du body
-*/
-extract_json_from_body() =
-    match HttpRequest.get_body() with
-     | {none} -> {failure="no body"}
-     | {some=raw_body} -> 
-         match Json.deserialize(raw_body) with
-	  | {none} -> {failure= "impossible de convertir en json {raw_body}"}
-	  | {some=jsast} -> {success= OpaSerialize.Json.unserialize_unsorted(jsast)}
-	 end
-    end
+links_domain_domain() = Iter.count(DbSet.iterator(/edges[t == {outside_domain}]))
+nb_node_visited() = Iter.count(DbSet.iterator(/nodes[visited == true]))
+stats_content() =
+    <>  
+        <h1>Statistiques</h1>
+        <ul>
+          <li>Nombre de noeuds : {/nodes_count}</li>
+          <li>Nombre de liens : {/edges_count}</li>
+          <li>Nombre de domaines : {List.length(/domains)}</li>
+          <li>Nombre de liens "externes" : {links_domain_domain()}</li>
+          <li>Nombre de noeuds visités : {nb_node_visited()}</li>
+        </ul>
+    </>
+stats() = Resource.html("OPASigmaJS :: DEMO :: Stats", stats_content())
 
-type Rest.Add.pages = {urls : list(string)}
 
-/**
-Ajouter des pages
-*/
-rest_add_pages() =
-	match extract_json_from_body() with
-	 | {~failure} -> 
-		do jlog("add_page : {failure}")
-		Resource.raw_status({bad_request})
-	 | {success=opt} -> 
-		match opt with
-		 | {none} -> 
-			do jlog("add_page : le json ne correspond pas")
-			Resource.raw_status({bad_request})
-		 | {some=record : Rest.Add.pages} ->
-			do add_pages(record.urls)
-			Resource.raw_status({success})
-		end
-	end
 
-/**
-Vérifier si une url a besoin d'être vérifié
-**/
-rest_need_a_visit()=
-    match HttpRequest.get_body() with
-     | {~some} -> r = if url_need_visit(some) then "true" else "false"
-                  Resource.raw_response(r, "text/plain", {success})
-     | {none} -> Resource.raw_response("false", "text/plain", {success})
-    end
-
-type Rest.Add.links = {url : string links : list(string)}
-/**
-Ajouter des liens
-**/
-rest_add_liens()=
-	match extract_json_from_body() with
-	 | {~failure} -> 
-		do jlog("add_links : {failure}")
-		Resource.raw_status({bad_request})
-	 | {success=opt} -> 
-		match opt with
-		 | {none} -> 
-			do jlog("add_links : le json ne correspond pas")
-			Resource.raw_status({bad_request})
-		 | {some=record : Rest.Add.links} ->
-			do add_liens(record.url, record.links)
-			Resource.raw_status({success})
-		end
-	end
-
-/**
-Obtenir des urls a visiter
-**/
-rest_get_urls()=
-    do jlog("a crawler ask url")
-    Resource.json(OpaSerialize.Json.serialize(urls_to_visit(5)))
-
-rest(path) =
-    match HttpRequest.get_method() with
-     | {some = method} -> match method with
-       	       	       	   | {post} -> match path with
-			     	                   | "need_a_visit" -> rest_need_a_visit()
-				                       | "add_pages" -> rest_add_pages()
-					                   | "add_liens" -> rest_add_liens()
-					                   | _ -> Resource.raw_status({bad_request})
-				                    end
-	                       | {get} -> match path with
-		     	                        | "get_urls" -> rest_get_urls()
-				                        | _ -> Resource.raw_status({bad_request})
-				                    end
-	  | _ -> Resource.raw_status({method_not_allowed})
-			  end
-     | _ -> Resource.raw_status({bad_request})
 
 
 urls : Parser.general_parser(http_request -> resource) =
     parser
-      | "/_rest_/" path=(.*) -> _req -> rest(Text.to_string(path))
+      | "/_rest_/" path=(.*) -> _req -> Rest.run(Text.to_string(path))
       | "/help" -> _req -> help()
+      | "/stats" -> _req -> stats()
+      | "/all" -> _req -> page_all()
       | "/domain" -> _req -> page_domain()
       | .* -> _req -> page()
 
