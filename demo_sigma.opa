@@ -158,7 +158,21 @@ page() = Resource.styled_page("OPASigmaJS :: DEMO", ["/res/css.css"], content({a
 page_all() = Resource.styled_page("OPASigmaJS :: DEMO", ["/res/css.css"], content({super}))
 
 content_domain() =
-    all_domain = List.fold((domain, acc -> <><li><a onclick={_ -> do Dom.transform([#sigma_demo <- <></>]) load_client({~domain})}>{domain} ({Graphe.nodes_in_domain(domain)})</a></li>{acc}</>), /domains, <></>) 
+    all_domain = List.fold(
+      (r, acc -> 
+        <>
+        {acc}
+        <li>
+          <a onclick={_ -> 
+            do Dom.transform([#sigma_demo <- <></>]) 
+            load_client({domain=r.domain})}>
+          {r.domain} ({r.count})
+          </a>
+        </li>
+        </>), 
+      Graphe.get_domains_with_nb_pages(), 
+      <></>
+    )
     <div id=#sigma_demo>
         <ul>{all_domain}</ul>
     </>

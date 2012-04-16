@@ -1,5 +1,7 @@
 // @author Matthieu Guffroy
 
+import stdlib.apis.mongo
+
 /*
   Déclaration des types
 */
@@ -39,6 +41,8 @@ db /domains : list(Domain.ref)
 
 db /nodes[_]/visited = false
 db /edges[_] full
+
+
 
 /*
   Fonctions permettant d'accéder à la db
@@ -159,5 +163,27 @@ Graphe = {{
     nodes_in_domain(domain : Domain.ref) : int =
       it = DbSet.iterator(/nodes[domain == domain])
       Iter.count(it)
+
+    get_domains_with_nb_pages() : list({domain:string; count:int}) =
+      collection = MongoCollection.openfatal("default","_no_name","nodes") : Mongo.collection(Node)
+      key = Bson.opa2doc({domain= true})
+      initial = Bson.opa2doc({count=0})
+      result = MongoCollection.group(
+        collection, key, 
+        "function(obj,prev) \{prev.count++;\}",
+        initial, 
+        none, none
+      )
+      r_analyze = MongoCollection.analyze_group(result) : Mongo.group_result({domain : string count: int})
+      final_result = match r_analyze with 
+      | {~failure} -> 
+        do Log.error("nodes_in_domain", "{failure}")
+        []
+      | {success=group} ->
+        do jlog("nodes_in_domain : count={group.count} keys={group.keys} ok={group.ok}")
+        group.retval
+      end
+      do MongoCollection.destroy(collection)
+      final_result
 
 }}
