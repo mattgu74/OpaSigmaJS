@@ -25,7 +25,7 @@ Then goto http://localhost:8080 and enjoy.
 
 With opa ubuntu package.
 == COMPILE WITH ==
-Opa compiler (c) MLstate -- version 0.9.2 -- build 1591
+Opa compiler (c) MLstate -- version 0.9.2 -- build 1591 (DB3 => MONGODB)
 Opa compiler (c) MLstate -- version 0.9.1 -- build 1555
 Opa compiler (c) MLstate -- version 0.9.1 -- build 1518
 
